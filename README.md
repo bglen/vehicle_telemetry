@@ -50,6 +50,11 @@ Place your Place your DBC file in the project directory and update the path in c
 ```
 DBC_FILE = '/home/pi/rpi-can-logger/your_file.dbc'
 ```
+You can choose the directory where CSV logs are saved:
+```
+OUTPUT_DIR = '/home/pi/can_logs'
+```
+
 ### Logging Output
 CAN Messages are decoded with the DBC file and logged. Each log is saved as a CSV file:
 ```

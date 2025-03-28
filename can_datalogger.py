@@ -13,9 +13,10 @@ BUTTON_PIN = 27
 
 # === CAN Logger Config ===
 DBC_FILE = '/home/pi/your_file.dbc'
+OUTPUT_DIR = '/home/pi/can_logs'
+
 CHANNEL = 'can0'
 BITRATE = 1000000
-OUTPUT_DIR = '/home/pi/can_logs'
 
 # === Global Variables ===
 logging_active = False
@@ -85,14 +86,31 @@ def log_loop():
             msg = can_interface.recv(timeout=1)
             if msg is None or not logging_active:
                 continue
+
+            # Update the logging timestamp
             rel_time = time.time() - start_time
+
+            # Try to decode message with DBC
             try:
                 decoded = db.decode_message(msg.arbitration_id, msg.data)
-                csv_writer.writerow([f"{rel_time:.6f}", db.get_message_by_frame_id(msg.arbitration_id).name,
-                                     hex(msg.arbitration_id), decoded])
-                csvfile.flush()
+                message_name = db.get_message_by_frame_id(msg.arbitration_id).name
+                signals = decoded
+
             except Exception as e:
+                # Log the raw data if the DBC cannot decode message
+                message_name = "RAW_MSG"
+                signals = msg.data.hex()
                 print(f"Decode error: ID {hex(msg.arbitration_id)} Data {msg.data.hex()} Error: {e}")
+
+            # Write to CSV
+            csv_writer.writerow([
+                f"{rel_time:.6f}",
+                message_name,
+                hex(msg.arbitration_id),
+                signals
+            ])
+            csvfile.flush()
+
         except Exception as e:
             print(f"CAN receive error: {e}")
             GPIO.output(LED_PIN, GPIO.LOW)
@@ -108,7 +126,7 @@ def main():
     try:
         log_loop()
     except KeyboardInterrupt:
-        print("Shutting down gracefully.")
+        print("Shutting down.")
     finally:
         if csvfile:
             csvfile.flush()
