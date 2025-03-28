@@ -1,3 +1,4 @@
+import subprocess
 import can
 import cantools
 import csv
@@ -38,6 +39,18 @@ def load_dbc():
         db = cantools.database.load_file(DBC_FILE)
     except Exception as e:
         print(f"Failed to load DBC: {e}")
+        GPIO.output(LED_PIN, GPIO.LOW)
+        exit(1)
+
+def setup_can_interface():
+    try:
+        subprocess.run(
+            ["sudo", "ip", "link", "set", CHANNEL, "up", "type", "can", "bitrate", str(BITRATE)],
+            check=True
+        )
+        print(f"CAN interface {CHANNEL} brought up at {BITRATE} bps.")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to bring up CAN interface: {e}")
         GPIO.output(LED_PIN, GPIO.LOW)
         exit(1)
 
@@ -119,6 +132,7 @@ def log_loop():
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     load_dbc()
+    setup_can_interface()
     init_can()
     print("Ready. Press the button to start/stop logging.")
     GPIO.output(LED_PIN, GPIO.LOW)
