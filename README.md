@@ -27,26 +27,36 @@ A simple CAN bus datalogger built for the Raspberry Pi 3 Model B+ using an Innom
 
 ### Clone repository
 Open terminal on your Raspberyy Pi and type:
-```
+```bash
+# Clone the repository
 git clone https://github.com/bglen/can_datalogger
-cd can_datalogger
 ```
 
 ### Install Dependencies
 
 ```bash
+# Update and install system dependencies
 sudo apt update
-sudo apt install -y python3-pip python3-rpi.gpio can-utils bluetooth bluez
-pip3 install python-can cantools
+sudo apt install -y python3-pip python3-venv python3-rpi.gpio can-utils
+
+# Navigate to your project directory
+cd can_datalogger  # or wherever your repo is cloned
+
+# Create and activate a virtual environment
+python3 -m venv venv --system-site-packages
+source venv/bin/activate
+
+# Install required Python packages inside the virtual environment
+pip install python-can cantools
 ```
 
 ### Auto-Start on Boot
 Place the can_datalogger.service file at
-```
+```bash
 /etc/systemd/system/can_datalogger.service
 ```
 Reload systemd and enable the service:
-```
+```bash
 sudo systemctl daemon-reexec
 sudo systemctl daemon-reload
 sudo systemctl enable canlogger.service
