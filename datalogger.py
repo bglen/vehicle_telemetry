@@ -9,8 +9,8 @@ import RPi.GPIO as GPIO
 import threading
 
 # === GPIO Configuration ===
-LED_PIN = 17
-BUTTON_PIN = 27
+BUTTON_PIN = 0
+LED_PIN = 5
 
 # === CAN Logger Config ===
 DBC_FILE = '/home/pi/your_file.dbc'
@@ -28,10 +28,11 @@ start_time = None
 can_interface = None
 db = None
 
-# === Setup GPIO ===
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(LED_PIN, GPIO.OUT)
-GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+def setup_gpio():
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(LED_PIN, GPIO.OUT)
+    GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.add_event_detect(BUTTON_PIN, GPIO.FALLING, callback=toggle_logging, bouncetime=300)
 
 def load_dbc():
     global db
@@ -90,8 +91,6 @@ def toggle_logging(channel):
         stop_logging = False
         GPIO.output(LED_PIN, GPIO.HIGH)
 
-GPIO.add_event_detect(BUTTON_PIN, GPIO.RISING, callback=toggle_logging, bouncetime=300)
-
 def log_loop():
     global stop_logging, logging_active
     while True:
@@ -131,6 +130,7 @@ def log_loop():
 
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    setup_gpio()
     load_dbc()
     setup_can_interface()
     init_can()
