@@ -7,6 +7,10 @@ import time
 from datetime import datetime
 from gpiozero import LED, Button
 import threading
+import sys
+import select
+import termios
+import tty
 
 # === GPIO Configuration ===
 button = Button(6, pull_up = True, bounce_time = 0.05)
@@ -30,6 +34,7 @@ db = None
 
 def load_dbc():
     global db
+    
     try:
         db = cantools.database.load_file(DBC_FILE)
     except Exception as e:
@@ -55,6 +60,7 @@ def setup_can_interface():
 
 def init_can():
     global can_interface
+
     try:
         can_interface = can.interface.Bus(channel=CHANNEL, interface='socketcan')
     except Exception as e:
@@ -73,6 +79,7 @@ def new_log_file():
 
 def toggle_logging(channel):
     global logging_active, stop_logging, csvfile
+
     if logging_active:
         print("Stopping logging...")
         logging_active = False
@@ -89,42 +96,70 @@ def toggle_logging(channel):
         stop_logging = False
         led.on()
 
+def confirm_clear():
+    if logging_active:
+        print("Cannot clear logs while logging is active.")
+        return
+
+    print("Are you sure you want to delete all .csv log files in can_logs? (Y/N): ", end="", flush=True)
+    response = input().strip().lower()
+
+    if response == 'y':
+        deleted = 0
+        for file in os.listdir(OUTPUT_DIR):
+            if file.endswith('.csv'):
+                file_path = os.path.join(OUTPUT_DIR, file)
+                os.remove(file_path)
+                deleted += 1
+        print(f"{deleted} log file(s) deleted.")
+    else:
+        print("Clear canceled.")
+
 def log_loop():
     global stop_logging, logging_active
-    while True:
-        try:
-            msg = can_interface.recv(timeout=1)
-            if msg is None or not logging_active:
-                continue
+    old_settings = termios.tcgetattr(sys.stdin)
+    tty.setcbreak(sys.stdin.fileno())
 
-            # Update the logging timestamp
-            rel_time = time.time() - start_time
+    try:
+        while True:
+            # Check for user input only when not logging
+            if not logging_active and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+                cmd = sys.stdin.readline().strip().lower()
+                if cmd == "clear":
+                    confirm_clear()
 
-            # Try to decode message with DBC
             try:
-                decoded = db.decode_message(msg.arbitration_id, msg.data)
-                message_name = db.get_message_by_frame_id(msg.arbitration_id).name
-                signals = decoded
+                msg = can_interface.recv(timeout=1)
+                if msg is None or not logging_active:
+                    continue
+
+                # Update the logging timestamp
+                rel_time = time.time() - start_time
+
+                # Try to decode message with DBC
+                try:
+                    decoded = db.decode_message(msg.arbitration_id, msg.data)
+                    message_name = db.get_message_by_frame_id(msg.arbitration_id).name
+                    signals = decoded
+                except Exception as e:
+                    message_name = "RAW_MSG"
+                    signals = msg.data.hex()
+                    print(f"Decode error: ID {hex(msg.arbitration_id)} Data {msg.data.hex()} Error: {e}")
+
+                csv_writer.writerow([
+                    f"{rel_time:.6f}",
+                    message_name,
+                    hex(msg.arbitration_id),
+                    signals
+                ])
+                csvfile.flush()
 
             except Exception as e:
-                # Log the raw data if the DBC cannot decode message
-                message_name = "RAW_MSG"
-                signals = msg.data.hex()
-                print(f"Decode error: ID {hex(msg.arbitration_id)} Data {msg.data.hex()} Error: {e}")
-
-            # Write to CSV
-            csv_writer.writerow([
-                f"{rel_time:.6f}",
-                message_name,
-                hex(msg.arbitration_id),
-                signals
-            ])
-            csvfile.flush()
-
-        except Exception as e:
-            print(f"CAN receive error: {e}")
-            led.off()
-            time.sleep(1)
+                print(f"CAN receive error: {e}")
+                led.off()
+                time.sleep(1)
+    finally:
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
