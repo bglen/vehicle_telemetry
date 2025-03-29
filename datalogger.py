@@ -144,6 +144,10 @@ def main():
         if csvfile:
             csvfile.flush()
             csvfile.close()
+            
+        # Bring down the CAN interface on exit
+        subprocess.run(["sudo", "ip", "link", "set", CHANNEL, "down"], check=False)
+        print("CAN interface brought down.")
 
 if __name__ == '__main__':
     main()
