@@ -56,7 +56,7 @@ def setup_can_interface():
 def init_can():
     global can_interface
     try:
-        can_interface = can.interface.Bus(channel=CHANNEL, bustype='socketcan')
+        can_interface = can.interface.Bus(channel=CHANNEL, interface='socketcan')
     except Exception as e:
         print(f"CAN Interface Error: {e}")
         led.off()
