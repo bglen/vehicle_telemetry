@@ -1,13 +1,13 @@
-# /etc/systemd/system/datalogger.service
 [Unit]
 Description=CAN Logger Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /home/datalogger/datalogger.py
-Restart=always
-User=root
 Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=%h/can_datalogger
+ExecStart=%h/can_datalogger/venv/bin/python %h/can_datalogger/datalogger.py
+Restart=always
+User=%i
 
 [Install]
 WantedBy=multi-user.target
