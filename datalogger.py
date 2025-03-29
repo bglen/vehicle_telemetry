@@ -34,7 +34,7 @@ db = None
 
 def load_dbc():
     global db
-    
+
     try:
         db = cantools.database.load_file(DBC_FILE)
     except Exception as e:
@@ -127,6 +127,11 @@ def log_loop():
                 cmd = sys.stdin.readline().strip().lower()
                 if cmd == "clear":
                     confirm_clear()
+
+            # Skips calling recv (which is blocking) if not logging, allowing CLI commands
+            if not logging_active:
+                time.sleep(0.1)
+                continue
 
             try:
                 msg = can_interface.recv(timeout=1)
