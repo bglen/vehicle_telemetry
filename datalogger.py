@@ -39,6 +39,10 @@ def load_dbc():
 
 def setup_can_interface():
     try:
+        # Bring CAN interface down if it is already up
+        subprocess.run(["sudo", "ip", "link", "set", "can0", "down"], check=False)
+
+        # Bring CAN interface up
         subprocess.run(
             ["sudo", "ip", "link", "set", CHANNEL, "up", "type", "can", "bitrate", str(BITRATE)],
             check=True
