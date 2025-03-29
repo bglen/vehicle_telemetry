@@ -117,13 +117,17 @@ def confirm_clear():
 
 def log_loop():
     global stop_logging, logging_active
-    old_settings = termios.tcgetattr(sys.stdin)
-    tty.setcbreak(sys.stdin.fileno())
+
+    # CLI commands are only enabled if started from the terminal
+    input_enabled = sys.stdin.isatty()
+    if input_enabled:
+        old_settings = termios.tcgetattr(sys.stdin)
+        tty.setcbreak(sys.stdin.fileno())
 
     try:
         while True:
             # Check for user input only when not logging
-            if not logging_active and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+            if input_enabled and not logging_active and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
                 cmd = sys.stdin.readline().strip().lower()
                 if cmd == "clear":
                     confirm_clear()
@@ -164,7 +168,8 @@ def log_loop():
                 led.off()
                 time.sleep(1)
     finally:
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+        if input_enabled:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)

@@ -51,17 +51,23 @@ pip install python-can cantools
 ```
 
 ### Auto-Start on Boot
-Place the can_datalogger.service file at
+Place the can_datalogger@.service file at
 ```bash
-/etc/systemd/system/can_datalogger.service
+/etc/systemd/system/can_datalogger@.service
 ```
 Reload systemd and enable the service:
 ```bash
 sudo systemctl daemon-reexec
 sudo systemctl daemon-reload
-sudo systemctl enable canlogger.service
-sudo systemctl start canlogger.service
+sudo systemctl enable datalogger@USER
+sudo systemctl start datalogger@USER
 ```
+Where @USER is the username of your Pi. To verify it is working:
+```bash
+sudo systemctl start datalogger@USER
+```
+
+
 This will start the can_logger script on power up.
 
 ## Usage
