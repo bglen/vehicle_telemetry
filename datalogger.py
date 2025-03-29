@@ -5,12 +5,12 @@ import csv
 import os
 import time
 from datetime import datetime
-import RPi.GPIO as GPIO
+from gpiozero import LED, Button
 import threading
 
 # === GPIO Configuration ===
-BUTTON_PIN = 0
-LED_PIN = 5
+button = Button(6, pull_up = True)
+led = LED(5)
 
 # === CAN Logger Config ===
 OUTPUT_DIR = os.path.expanduser('~/can_logs')
@@ -28,20 +28,13 @@ start_time = None
 can_interface = None
 db = None
 
-def setup_gpio():
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(LED_PIN, GPIO.OUT)
-    GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    GPIO.remove_event_detect(BUTTON_PIN)
-    GPIO.add_event_detect(BUTTON_PIN, GPIO.FALLING, callback=toggle_logging, bouncetime=300)
-
 def load_dbc():
     global db
     try:
         db = cantools.database.load_file(DBC_FILE)
     except Exception as e:
         print(f"Failed to load DBC: {e}")
-        GPIO.output(LED_PIN, GPIO.LOW)
+        led.off()
         exit(1)
 
 def setup_can_interface():
@@ -53,7 +46,7 @@ def setup_can_interface():
         print(f"CAN interface {CHANNEL} brought up at {BITRATE} bps.")
     except subprocess.CalledProcessError as e:
         print(f"Failed to bring up CAN interface: {e}")
-        GPIO.output(LED_PIN, GPIO.LOW)
+        led.off();
         exit(1)
 
 def init_can():
@@ -62,7 +55,7 @@ def init_can():
         can_interface = can.interface.Bus(channel=CHANNEL, bustype='socketcan')
     except Exception as e:
         print(f"CAN Interface Error: {e}")
-        GPIO.output(LED_PIN, GPIO.LOW)
+        led.off()
         exit(1)
 
 def new_log_file():
@@ -80,7 +73,7 @@ def toggle_logging(channel):
         print("Stopping logging...")
         logging_active = False
         stop_logging = True
-        GPIO.output(LED_PIN, GPIO.LOW)
+        led.off()
         if csvfile:
             csvfile.flush()
             csvfile.close()
@@ -90,7 +83,7 @@ def toggle_logging(channel):
         new_log_file()
         logging_active = True
         stop_logging = False
-        GPIO.output(LED_PIN, GPIO.HIGH)
+        led.on()
 
 def log_loop():
     global stop_logging, logging_active
@@ -126,17 +119,18 @@ def log_loop():
 
         except Exception as e:
             print(f"CAN receive error: {e}")
-            GPIO.output(LED_PIN, GPIO.LOW)
+            led.off()
             time.sleep(1)
 
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    setup_gpio()
     load_dbc()
     setup_can_interface()
     init_can()
     print("Ready. Press the button to start/stop logging.")
-    GPIO.output(LED_PIN, GPIO.LOW)
+    led.off();
+
+    button.when_pressed = toggle_logging
 
     try:
         log_loop()
@@ -146,7 +140,6 @@ def main():
         if csvfile:
             csvfile.flush()
             csvfile.close()
-        GPIO.cleanup()
 
 if __name__ == '__main__':
     main()
