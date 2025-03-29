@@ -9,7 +9,7 @@ from gpiozero import LED, Button
 import threading
 
 # === GPIO Configuration ===
-button = Button(6, pull_up = True, bounce_time = 0.3)
+button = Button(6, pull_up = True, bounce_time = 0.05)
 led = LED(5)
 
 # === CAN Logger Config ===
@@ -144,7 +144,7 @@ def main():
         if csvfile:
             csvfile.flush()
             csvfile.close()
-            
+
         # Bring down the CAN interface on exit
         subprocess.run(["sudo", "ip", "link", "set", CHANNEL, "down"], check=False)
         print("CAN interface brought down.")
