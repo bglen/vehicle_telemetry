@@ -13,8 +13,8 @@ BUTTON_PIN = 0
 LED_PIN = 5
 
 # === CAN Logger Config ===
-DBC_FILE = '/home/pi/your_file.dbc'
-OUTPUT_DIR = '/home/pi/can_logs'
+OUTPUT_DIR = os.path.expanduser('~/can_logs')
+DBC_FILE = os.path.expanduser('~/can_logs/e36.dbc')
 
 CHANNEL = 'can0'
 BITRATE = 1000000
