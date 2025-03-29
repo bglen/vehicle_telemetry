@@ -9,7 +9,7 @@ from gpiozero import LED, Button
 import threading
 
 # === GPIO Configuration ===
-button = Button(6, pull_up = True)
+button = Button(6, pull_up = True, bounce_time = 0.3)
 led = LED(5)
 
 # === CAN Logger Config ===
