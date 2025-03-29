@@ -3,11 +3,12 @@ Description=CAN Logger Service
 After=network.target
 
 [Service]
-Environment=PYTHONUNBUFFERED=1
-WorkingDirectory=%h/can_datalogger
-ExecStart=%h/can_datalogger/venv/bin/python %h/can_datalogger/datalogger.py
+Type=simple
+User=datalogger
+WorkingDirectory=/home/datalogger/can_datalogger
+ExecStart=/home/datalogger/can_datalogger/venv/bin/python /home/datalogger/can_datalogger/datalogger.py
 Restart=always
-User=%i
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target
