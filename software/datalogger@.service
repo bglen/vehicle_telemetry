@@ -1,6 +1,7 @@
 [Unit]
 Description=CAN Logger Service
-After=network.target
+After=network.target ys-devices-platform-soc*.target
+Wants=network.target
 
 [Service]
 Type=simple

@@ -14,7 +14,8 @@ import tty
 
 # === GPIO Configuration ===
 button = Button(6, pull_up = True, bounce_time = 0.05)
-led = LED(5)
+led = LED(5, initial_value=False)
+led.off()
 
 # === CAN Logger Config ===
 OUTPUT_DIR = os.path.expanduser('~/can_logs')
