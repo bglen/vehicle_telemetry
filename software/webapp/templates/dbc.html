@@ -1,0 +1,33 @@
+<!-- templates/dbc.html -->
+{% extends 'base.html' %}
+{% block title %}DBC Files{% endblock %}
+{% block content %}
+    <h2>DBC Files</h2>
+    <p>The datalogger will combine multiple DBC files together for CAN decoding.</p>
+
+    <form action="{{ url_for('upload_dbc') }}" method="post" enctype="multipart/form-data">
+      <input type="file" name="dbc_file" accept=".dbc">
+      <button class="btn btn-primary" type="submit">Upload DBC</button>
+    </form>
+
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Filename</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fn in files %}
+          <tr>
+            <td>{{ fn }}</td>
+            <td>
+              <form action="{{ url_for('delete_dbc', filename=fn) }}" method="post" style="display:inline;" onsubmit="return confirm('Delete {{ fn }}?');">
+                <button class="btn btn-primary" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+{% endblock %}
