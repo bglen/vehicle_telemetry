@@ -19,7 +19,7 @@ led.off()
 
 # === CAN Logger Config ===
 OUTPUT_DIR = os.path.expanduser('~/can_logs')
-DBC_FILE = os.path.expanduser('~/can_logs/e36.dbc')
+DBC_FILE = os.path.expanduser('~/e36.dbc')
 
 CHANNEL = 'can0'
 BITRATE = 1000000
@@ -156,6 +156,7 @@ def log_loop():
                     signals = msg.data.hex()
                     print(f"Decode error: ID {hex(msg.arbitration_id)} Data {msg.data.hex()} Error: {e}")
 
+                # write data to the csv file
                 csv_writer.writerow([
                     f"{rel_time:.6f}",
                     message_name,
