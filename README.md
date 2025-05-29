@@ -11,6 +11,8 @@ A simple CAN bus datalogger built for the Raspberry Pi 3 Model B+ using an Innom
 - Designed for Raspberry Pi 3 Model B+, can be easilly modified to work with other Pi models 
 
 ### To Do:
+- improve csv file naming
+- Make it boot faster
 - Create PCB to eliminate internal wire harness
 - DJI Action Camera auto start/stop via GPS and Bluetooth
 - Connect to the internet via Phone USB hotspot
