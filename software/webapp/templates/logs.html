@@ -3,18 +3,20 @@
 {% block title %}CAN Logs{% endblock %}
 {% block content %}
     <h2>Log Files</h2>
+    <br>
 
     <form action="{{ url_for('delete_all_logs') }}" method="post" onsubmit="return confirm('Are you sure you want to delete all logs?');">
-      <button class="btn btn-primary" type="submit">Delete All Logs</button>
+      <button class="btn btn-danger" type="submit">Delete All Log Files</button>
     </form>
+    <br>
 
-    <table class="table table-striped">
+    <table class="table table-striped table-hover table-sm table-bordered ">
       <thead>
         <tr>
-          <th>Filename</th>
-          <th>Timestamp</th>
-          <th>Location</th>
-          <th>Actions</th>
+          <th class="text-center">Filename</th>
+          <th class="text-center">Timestamp</th>
+          <th class="text-center">Location</th>
+          <th class="text-center">Actions</th>
         </tr>
       </thead>
 
@@ -30,11 +32,16 @@
                 N/A
               {% endif %}
             </td>
-            <td>
-              <a href="{{ url_for('download_log', filename=entry.filename) }}">Download</a>
-              <form action="{{ url_for('delete_log', filename=entry.filename) }}" method="post" style="display:inline;" onsubmit="return confirm('Delete {{ entry.filename }}?');">
-                <button class="btn btn-primary" type="submit">Delete</button>
-              </form>
+            <td class="text-center">
+              <div class="d-inline-flex align-items-center gap-2">
+                <a class="btn btn-sm btn-primary"
+                    href="{{ url_for('download_log', filename=entry.filename) }}">
+                    Download
+                </a>
+                <form action="{{ url_for('delete_log', filename=entry.filename) }}" method="post" style="display:inline;" onsubmit="return confirm('Delete {{ entry.filename }}?');">
+                    <button class="btn btn-danger" type="submit">Delete</button>
+                </form>
+            </div>
             </td>
           </tr>
         {% endfor %}
