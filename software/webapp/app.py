@@ -1,5 +1,6 @@
 from flask import Flask, render_template, send_from_directory, request, redirect, url_for, flash
 import os, json
+import pandas as pd
 
 CAN_DIR = os.path.join(os.getcwd(), 'can_logs')
 DBC_DIR = os.path.join(os.getcwd(), 'dbc')
@@ -85,3 +86,79 @@ def delete_dbc(filename):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
+# ——— Data Analysis Page ————————————————————————————————
+from dash import Dash, dcc, html
+from dash.dependencies import Input, Output
+import dash_bootstrap_components as dash_bc
+import plotly.graph_objs as go
+import plotly.io as pio
+
+pio.templates.default = 'plotly_dark'
+
+@app.route('/data_analysis')
+def data_analysis_page():
+    return render_template('data_analysis.html')
+
+# create Dash, tell it to use our Flask server under /data-analysis/
+dash_app = Dash(
+    __name__,
+    server=app,
+    url_base_pathname='/data_app/',
+    external_stylesheets=[dash_bc.themes.CYBORG]
+)
+
+def list_csv_files():
+    return sorted(f for f in os.listdir(CAN_DIR) if f.endswith('.csv'))
+
+dash_app.layout = html.Div([
+    # Dropdown to pick CSV file
+    dcc.Dropdown(
+        id='file-dropdown',
+        options=[{'label':fn, 'value':fn} for fn in list_csv_files()],
+        placeholder="Select a CSV file"
+    ),
+    # Dropdown to pick which column to plot (populated once file is chosen)
+    dcc.Dropdown(id='column-dropdown', placeholder="Select data column"),
+    # The graph
+    dcc.Graph(id='time-series-plot')
+])
+
+# When a file is chosen, populate the columns dropdown
+@dash_app.callback(
+    Output('column-dropdown', 'options'),
+    Input('file-dropdown', 'value')
+)
+def update_column_options(selected_file):
+    if not selected_file:
+        return []
+    df = pd.read_csv(os.path.join(CAN_DIR, selected_file))
+    # first column is time; we’ll offer all others for plotting
+    cols = list(df.columns[1:])
+    return [{'label': c, 'value': c} for c in cols]
+
+# When both file and column are chosen, update the figure
+@dash_app.callback(
+    Output('time-series-plot', 'figure'),
+    Input('file-dropdown', 'value'),
+    Input('column-dropdown', 'value')
+)
+def update_graph(selected_file, selected_column):
+    if not selected_file or not selected_column:
+        return go.Figure()  # empty figure still picks up default
+
+    df = pd.read_csv(os.path.join(CAN_DIR, selected_file))
+    x = df.iloc[:,0]
+    y = df[selected_column]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=x, y=y, mode='lines', name=selected_column))
+    fig.update_layout(
+      title=f"{selected_column} over Time",
+      xaxis_title=df.columns[0],
+      yaxis_title=selected_column,
+      # ← do NOT set a `template` here
+      paper_bgcolor='rgba(0,0,0,0)',
+      plot_bgcolor='rgba(0,0,0,0)',
+    )
+    return fig
