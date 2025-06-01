@@ -5,15 +5,13 @@ A simple CAN bus datalogger built for the Raspberry Pi 3 Model B+ using an Innom
 ### Features
 - Starts and stops logging with a physical button
 - LED indicates active logging status
-- Logs decoded CAN messages to timestamped CSV files
+- Logs decoded CAN messages to timestamped CSV files. Each signal within DBC-defined messages is a seperate column. Un-decoded message data is stored in a separate column
 - Access and download decoded log files on the logger's local WiFi hotspot
 - Handles sudden power loss gracefully
-- Supports 1 Mbps CAN using `socketcan`
-- Designed for Raspberry Pi 3 Model B+, can be easilly modified to work with other Pi models 
+- Supports 1 Mbps CAN 2.0B using `socketcan`
+- Designed for Raspberry Pi 3 Model B+, can be modified to work with other Pi models 
 
 ### To Do:
-- improve csv file naming
-- improve decoded log csv format
 - Make it boot faster
 - Create PCB to eliminate internal wire harness
 - DJI Action Camera auto start/stop via GPS and Bluetooth
@@ -22,6 +20,7 @@ A simple CAN bus datalogger built for the Raspberry Pi 3 Model B+ using an Innom
 - Dual CAN bus monitoring
 - Switch Pi to Pi Zero 2W & external antenna to reduce BOM cost
 - Update enclosure connector to AMP Superseal 1.0
+- Use the web interface as a bus monitor
 
 ---
 

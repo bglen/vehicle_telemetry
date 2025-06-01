@@ -32,6 +32,9 @@ csv_writer = None
 start_time = None
 can_interface = None
 db = None
+signal_columns = ["RAW_MSG"]
+current_values = None
+
 
 def load_dbc():
     global db
@@ -42,6 +45,12 @@ def load_dbc():
         print(f"Failed to load DBC: {e}")
         led.off()
         exit(1)
+    
+    # Grab all the defined signals in the DBC
+    for msg in db.messages:
+        for sig in msg.signals:
+            col_name = f"{msg.name}_{sig.name}"
+            signal_columns.append(col_name)
 
 def setup_can_interface():
     try:
@@ -71,11 +80,19 @@ def init_can():
 
 def new_log_file():
     global csvfile, csv_writer, start_time
+
     timestamp_str = datetime.now().strftime('%Y-%m-%d_%I-%M-%S-%p')
     filename = os.path.join(OUTPUT_DIR, f'can_log_{timestamp_str}.csv')
     csvfile = open(filename, mode='w', newline='')
     csv_writer = csv.writer(csvfile)
-    csv_writer.writerow(['Time (s)', 'Message Name', 'Arbitration ID', 'Signals'])
+
+    # Build the full header: Time, Arbitration ID, RAW_MSG, then each signal
+    header = ['Time (s)', 'Arbitration ID'] + signal_columns
+    csv_writer.writerow(header)
+
+    # Initialize current_values for signal columns
+    current_values = {col: '' for col in signal_columns}
+
     start_time = time.time()
 
 def toggle_logging(channel):
@@ -150,19 +167,24 @@ def log_loop():
                 try:
                     decoded = db.decode_message(msg.arbitration_id, msg.data)
                     message_name = db.get_message_by_frame_id(msg.arbitration_id).name
-                    signals = decoded
+
+                    # sucessfully decoded, so this becomes null
+                    current_values['RAW_MSG'] = ''
+
                 except Exception as e:
                     message_name = "RAW_MSG"
-                    signals = msg.data.hex()
+                    current_values['RAW_MSG'] = msg.data.hex()
                     print(f"Decode error: ID {hex(msg.arbitration_id)} Data {msg.data.hex()} Error: {e}")
 
-                # write data to the csv file
-                csv_writer.writerow([
-                    f"{rel_time:.6f}",
-                    message_name,
-                    hex(msg.arbitration_id),
-                    signals
-                ])
+                # Build the CSV row:
+                #  1) Time
+                #  2) Arbitration ID
+                #  3) For each signal‐column in all_signal_columns, use current_values
+                row = [f"{rel_time:.6f}", hex(msg.arbitration_id)]
+                for col in signal_columns:
+                    row.append(current_values[col])
+
+                csv_writer.writerow(row)
                 csvfile.flush()
 
             except Exception as e:
