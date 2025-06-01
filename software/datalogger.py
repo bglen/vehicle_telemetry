@@ -71,7 +71,7 @@ def init_can():
 
 def new_log_file():
     global csvfile, csv_writer, start_time
-    timestamp_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+    timestamp_str = datetime.now().strftime('%Y-%m-%d_%I-%M-%S-%p')
     filename = os.path.join(OUTPUT_DIR, f'can_log_{timestamp_str}.csv')
     csvfile = open(filename, mode='w', newline='')
     csv_writer = csv.writer(csvfile)
