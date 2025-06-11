@@ -7976,7 +7976,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_SO:SOIC-18W_7.5x11.6mm_P1.27mm"
+		(property "Footprint" "Package_DFN_QFN:QFN-20-1EP_4x4mm_P0.5mm_EP2.5x2.5mm"
 			(at 78.74 170.18 0)
 			(effects
 				(font
@@ -8989,7 +8989,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_SO:SOIC-18W_7.5x11.6mm_P1.27mm"
+		(property "Footprint" "Package_DFN_QFN:QFN-20-1EP_4x4mm_P0.5mm_EP2.5x2.5mm"
 			(at 78.74 91.44 0)
 			(effects
 				(font

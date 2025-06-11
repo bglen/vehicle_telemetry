@@ -3193,7 +3193,7 @@
 	)
 	(text "Raspberry Pi Zero 2W"
 		(exclude_from_sim no)
-		(at 133.604 19.304 0)
+		(at 133.858 20.32 0)
 		(effects
 			(font
 				(size 3.048 3.048)
@@ -3224,7 +3224,7 @@
 		)
 		(uuid "fe0113c1-4d29-40a9-b6d6-ffc8cb86aa2e")
 	)
-	(text_box "TODO:\n- battery/super capacitor for r/rw protection\n- connector & mating part numbers\n- pi mounting hardware\n- QR code to repository\n- silkscreeen info"
+	(text_box "TODO:\n- battery/super capacitor for r/rw protection\n- mating part numbers\n- pi mounting hardware\n- silkscreeen info"
 		(exclude_from_sim no)
 		(at 15.24 52.07 0)
 		(size 49.53 30.48)
@@ -3244,7 +3244,7 @@
 		)
 		(uuid "7ab885ef-3f6e-4372-af10-2410945d63c1")
 	)
-	(text_box "DESIGN REQUIREMENTS:\n- Raspberry Pi Mounting\n- 5V / 3.3V Power Supply\n- Right-angle ECU-style connector\n- 2 seperate CAN bus\n- Programmable GPIO\n- Ancillary sensors for log information:\n	- temperature\n	- pressure\n	- humidity level\n	- battery voltage"
+	(text_box "DESIGN REQUIREMENTS:\n- Raspberry Pi Mounting\n- 5V / 3.3V Power Supply\n- Right-angle ECU-style connector\n- 2 seperate CAN bus\n- Programmable GPIO\n- Ancillary sensors for log information:\n	- temperature\n	- pressure\n	- humidity level"
 		(exclude_from_sim no)
 		(at 15.24 15.24 0)
 		(size 49.53 33.02)
