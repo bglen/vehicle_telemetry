@@ -38,6 +38,9 @@
                     href="{{ url_for('download_log', filename=entry.filename) }}">
                     Download
                 </a>
+                <form action="{{ url_for('rename_log', filename=entry.filename) }}" method="post" style="display:inline;" onsubmit="">
+                    <button class="btn btn-sm btn-primary" type="submit">Rename</button>
+                </form>
                 <form action="{{ url_for('delete_log', filename=entry.filename) }}" method="post" style="display:inline;" onsubmit="return confirm('Delete {{ entry.filename }}?');">
                     <button class="btn btn-sm btn-danger" type="submit">Delete</button>
                 </form>

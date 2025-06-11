@@ -41,6 +41,11 @@ def list_logs():
 def download_log(filename):
     return send_from_directory(CAN_DIR, filename, as_attachment=True)
 
+# Rename Log
+@app.route('/logs/rename/<path:filename>')
+def rename_log(filename):
+    return 0
+
 # Delete Log
 @app.route('/logs/delete/<path:filename>', methods=['POST'])
 def delete_log(filename):
