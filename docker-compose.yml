@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  influxdb3:
+    image: influxdb:3-core
+    container_name: influxdb3-core
+    ports:
+      - "8181:8181"
+    volumes:
+      - influxdb3_data:/var/lib/influxdb3-engine
+    environment:
+      INFLUXDB3_OBJECT_STORE: file
+      INFLUXDB3_DB_DIR: /var/lib/influxdb3-engine
+      INFLUXDB3_NODE_IDENTIFIER_PREFIX: node0
+      INFLUXDB3_AUTH_TOKEN: apiv3_tJ5QTSphDJ2tzYfML2XTT6DO1Pkpw5gGrifJl71NBOA8439B7Rzr2tZfbf9IpSRujAHlyodju77VcZJ_VgilYQ
+    user: root
+
+volumes:
+  influxdb3_data:
+    driver: local
