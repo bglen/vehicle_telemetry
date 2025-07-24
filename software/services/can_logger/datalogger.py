@@ -1,111 +1,61 @@
-import subprocess
-import can
-import cantools
-import csv
 import os
+import csv
 import time
-from datetime import datetime
-from gpiozero import LED, Button
 import threading
 import sys
 import select
 import termios
 import tty
+from datetime import datetime
+from gpiozero import LED, Button
+
+# Python modules
+import canbus
 import gps
 
-# === CONFIGURATION ===
-# CAN Bus
-OUTPUT_DIR = os.path.expanduser('~/can_logs')
-DBC_FILE = os.path.expanduser('~/e36.dbc')
-CHANNEL = 'can0'
-BITRATE = 1000000
-
-# USB VK-162 GPS
+# === VK-162 GPS ===
 USE_GPS = True          # Set to False to disable GPS logging
 
-# GPIO
+# === GPIO ===
 button = Button(6, pull_up = True, bounce_time = 0.05)
 led = LED(5, initial_value=False)
 led.off()
 
+# === Logging === 
+OUTPUT_DIR = os.path.expanduser('~/can_logs')
+header = ['Time (s)', 'Arbitration ID'] + canbus.signal_columns
+if USE_GPS:
+    header += gps.GPS_COLUMNS
+
 # === Global Variables ===
 logging_active = False
-stop_logging = False
 csvfile = None
 csv_writer = None
 start_time = None
-can_interface = None
-db = None
-signal_columns = ["RAW_MSG"]
-current_values = None
-gps_columns = gps.GPS_COLUMNS if USE_GPS else []
-
-def load_dbc():
-    global db
-
-    try:
-        db = cantools.database.load_file(DBC_FILE)
-    except Exception as e:
-        print(f"Failed to load DBC: {e}")
-        led.off()
-        exit(1)
-    
-    # Grab all the defined signals in the DBC
-    for msg in db.messages:
-        for sig in msg.signals:
-            col_name = f"{msg.name}_{sig.name}"
-            signal_columns.append(col_name)
-
-def setup_can_interface():
-    try:
-        # Bring CAN interface down if it is already up
-        subprocess.run(["sudo", "ip", "link", "set", "can0", "down"], check=False)
-
-        # Bring CAN interface up
-        subprocess.run(
-            ["sudo", "ip", "link", "set", CHANNEL, "up", "type", "can", "bitrate", str(BITRATE)],
-            check=True
-        )
-        print(f"CAN interface {CHANNEL} brought up at {BITRATE} bps.")
-    except subprocess.CalledProcessError as e:
-        print(f"Failed to bring up CAN interface: {e}")
-        led.off()
-        exit(1)
-
-def init_can():
-    global can_interface
-
-    try:
-        can_interface = can.interface.Bus(channel=CHANNEL, interface='socketcan')
-    except Exception as e:
-        print(f"CAN Interface Error: {e}")
-        led.off()
-        exit(1)
 
 def new_log_file():
+    """
+    Create a new CSV log file and write header.
+    """
     global csvfile, csv_writer, start_time
+
     os.makedirs(OUTPUT_DIR, exist_ok=True) # make output directory if it does not exist
     timestamp_str = datetime.now().strftime('%Y-%m-%d_%I-%M-%S-%p')
     filename = os.path.join(OUTPUT_DIR, f'can_log_{timestamp_str}.csv')
     csvfile = open(filename, mode='w', newline='')
     csv_writer = csv.writer(csvfile)
-
-    # Build the full header: Time, Arbitration ID, RAW_MSG, then each signal
-    header = ['Time (s)', 'Arbitration ID'] + signal_columns + gps_columns
-    csv_writer.writerow(header)
-
-    # Initialize current_values for signal columns
-    # current_values = {col: '' for col in signal_columns}
-
+    csv_writer.writerow(header) # Write the column names in the header
     start_time = time.time()
 
 def toggle_logging():
-    global logging_active, stop_logging, csvfile
+    """
+    Start or stop logging when button is pressed.
+    """
+    global logging_active, csvfile
 
     if logging_active:
         print("Stopping logging...")
         logging_active = False
-        stop_logging = True
         led.off()
         if csvfile:
             csvfile.flush()
@@ -115,13 +65,15 @@ def toggle_logging():
         print("Starting new logging session...")
         new_log_file()
         logging_active = True
-        stop_logging = False
         led.on()
 
 def log_loop():
-    global stop_logging, logging_active
+    """
+    Logging loop to receive CAN frames, decode, append GPS, write to CSV, repeat.
+    """
+    global logging_active
 
-    # CLI commands are only enabled if started from the terminal
+    # Enable CLI commands if script was started from the terminal
     input_enabled = sys.stdin.isatty()
     if input_enabled:
         old_settings = termios.tcgetattr(sys.stdin)
@@ -131,8 +83,7 @@ def log_loop():
         while True:
             # Check for user input only when not logging
             if input_enabled and not logging_active and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-                cmd = sys.stdin.readline().strip().lower()
-                if cmd == "clear":
+                if sys.stdin.readline().strip().lower() == "clear":
                     confirm_clear()
 
             # Skips calling recv (which is blocking) if not logging, allowing CLI commands
@@ -141,7 +92,7 @@ def log_loop():
                 continue
 
             try:
-                msg = can_interface.recv(timeout=1)
+                msg = canbus.can_interface.recv(timeout=1)
                 if msg is None or not logging_active:
                     continue
 
@@ -149,25 +100,21 @@ def log_loop():
                 rel_time = time.time() - start_time
 
                 # Try to decode message with DBC
+                vals = {col: '' for col in canbus.signal_columns}
                 try:
-                    decoded = db.decode_message(msg.arbitration_id, msg.data)
-                    message_name = db.get_message_by_frame_id(msg.arbitration_id).name
+                    decoded = canbus.db.decode_message(msg.arbitration_id, msg.data)
+                    for name, val in decoded.items():
+                        key = f"{canbus.db.get_message_by_frame_id(msg.arbitration_id).name}_{name}"
+                        vals[key] = val
+                except Exception:
+                    vals['RAW_MSG'] = msg.data.hex()
 
-                    # sucessfully decoded, so this becomes null
-                    current_values['RAW_MSG'] = ''
-
-                except Exception as e:
-                    message_name = "RAW_MSG"
-                    current_values['RAW_MSG'] = msg.data.hex()
-                    print(f"Decode error: ID {hex(msg.arbitration_id)} Data {msg.data.hex()} Error: {e}")
-
-                # Build the CSV row:
-                #  1) Time
-                #  2) Arbitration ID
-                #  3) For each signal‐column in all_signal_columns, use current_values
                 row = [f"{rel_time:.6f}", hex(msg.arbitration_id)]
-                for col in signal_columns:
-                    row.append(current_values[col])
+                for col in canbus.signal_columns:
+                    row.append(vals.get(col, ''))
+
+                if USE_GPS:
+                    row += [gps.gps_data['lat'], gps.gps_data['lon'], gps.gps_data['speed'], gps.gps_data['track']]
 
                 csv_writer.writerow(row)
                 csvfile.flush()
@@ -181,6 +128,9 @@ def log_loop():
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
 def confirm_clear():
+    """
+    Delete all existing CSV logs, if user confirms.
+    """
     if logging_active:
         print("Cannot clear logs while logging is active.")
         return
@@ -200,9 +150,10 @@ def confirm_clear():
         print("Clear canceled.")
 
 def main():
-    load_dbc()
-    setup_can_interface()
-    init_can()
+    # Initialize CAN bus
+    canbus.load_dbc()
+    canbus.setup_interface()
+    canbus.init()
 
     # Start GPS thread if enabled
     if USE_GPS:
@@ -219,10 +170,7 @@ def main():
         if csvfile:
             csvfile.flush()
             csvfile.close()
-
-        # Bring down the CAN interface on exit
-        subprocess.run(["sudo", "ip", "link", "set", CHANNEL, "down"], check=False)
-        print("CAN interface brought down.")
+        canbus.bring_down_interface()
 
 if __name__ == '__main__':
     main()
