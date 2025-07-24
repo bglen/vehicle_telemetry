@@ -1320,7 +1320,7 @@
 		)
 		(symbol "MCP2515T-I/ML_1_0"
 			(pin power_out line
-				(at 15.24 -12.7 180)
+				(at -3.81 -20.32 90)
 				(length 2.54)
 				(name "EP"
 					(effects

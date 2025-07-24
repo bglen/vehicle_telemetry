@@ -11,18 +11,22 @@ import sys
 import select
 import termios
 import tty
+import gps
 
-# === GPIO Configuration ===
+# === CONFIGURATION ===
+# CAN Bus
+OUTPUT_DIR = os.path.expanduser('~/can_logs')
+DBC_FILE = os.path.expanduser('~/e36.dbc')
+CHANNEL = 'can0'
+BITRATE = 1000000
+
+# USB VK-162 GPS
+USE_GPS = True          # Set to False to disable GPS logging
+
+# GPIO
 button = Button(6, pull_up = True, bounce_time = 0.05)
 led = LED(5, initial_value=False)
 led.off()
-
-# === CAN Logger Config ===
-OUTPUT_DIR = os.path.expanduser('~/can_logs')
-DBC_FILE = os.path.expanduser('~/e36.dbc')
-
-CHANNEL = 'can0'
-BITRATE = 1000000
 
 # === Global Variables ===
 logging_active = False
@@ -34,7 +38,7 @@ can_interface = None
 db = None
 signal_columns = ["RAW_MSG"]
 current_values = None
-
+gps_columns = gps.GPS_COLUMNS if USE_GPS else []
 
 def load_dbc():
     global db
@@ -65,7 +69,7 @@ def setup_can_interface():
         print(f"CAN interface {CHANNEL} brought up at {BITRATE} bps.")
     except subprocess.CalledProcessError as e:
         print(f"Failed to bring up CAN interface: {e}")
-        led.off();
+        led.off()
         exit(1)
 
 def init_can():
@@ -80,22 +84,22 @@ def init_can():
 
 def new_log_file():
     global csvfile, csv_writer, start_time
-
+    os.makedirs(OUTPUT_DIR, exist_ok=True) # make output directory if it does not exist
     timestamp_str = datetime.now().strftime('%Y-%m-%d_%I-%M-%S-%p')
     filename = os.path.join(OUTPUT_DIR, f'can_log_{timestamp_str}.csv')
     csvfile = open(filename, mode='w', newline='')
     csv_writer = csv.writer(csvfile)
 
     # Build the full header: Time, Arbitration ID, RAW_MSG, then each signal
-    header = ['Time (s)', 'Arbitration ID'] + signal_columns
+    header = ['Time (s)', 'Arbitration ID'] + signal_columns + gps_columns
     csv_writer.writerow(header)
 
     # Initialize current_values for signal columns
-    current_values = {col: '' for col in signal_columns}
+    # current_values = {col: '' for col in signal_columns}
 
     start_time = time.time()
 
-def toggle_logging(channel):
+def toggle_logging():
     global logging_active, stop_logging, csvfile
 
     if logging_active:
@@ -113,25 +117,6 @@ def toggle_logging(channel):
         logging_active = True
         stop_logging = False
         led.on()
-
-def confirm_clear():
-    if logging_active:
-        print("Cannot clear logs while logging is active.")
-        return
-
-    print("Are you sure you want to delete all .csv log files in can_logs? (Y/N): ", end="", flush=True)
-    response = input().strip().lower()
-
-    if response == 'y':
-        deleted = 0
-        for file in os.listdir(OUTPUT_DIR):
-            if file.endswith('.csv'):
-                file_path = os.path.join(OUTPUT_DIR, file)
-                os.remove(file_path)
-                deleted += 1
-        print(f"{deleted} log file(s) deleted.")
-    else:
-        print("Clear canceled.")
 
 def log_loop():
     global stop_logging, logging_active
@@ -195,14 +180,35 @@ def log_loop():
         if input_enabled:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
+def confirm_clear():
+    if logging_active:
+        print("Cannot clear logs while logging is active.")
+        return
+
+    print("Are you sure you want to delete all .csv log files in can_logs? (Y/N): ", end="", flush=True)
+    response = input().strip().lower()
+
+    if response == 'y':
+        deleted = 0
+        for file in os.listdir(OUTPUT_DIR):
+            if file.endswith('.csv'):
+                file_path = os.path.join(OUTPUT_DIR, file)
+                os.remove(file_path)
+                deleted += 1
+        print(f"{deleted} log file(s) deleted.")
+    else:
+        print("Clear canceled.")
+
 def main():
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
     load_dbc()
     setup_can_interface()
     init_can()
-    print("Ready. Press the button to start/stop logging.")
-    led.off();
 
+    # Start GPS thread if enabled
+    if USE_GPS:
+        threading.Thread(target=gps.gps_reader, daemon=True).start()
+
+    print("Ready. Press the button to start/stop logging.")
     button.when_pressed = toggle_logging
 
     try:
