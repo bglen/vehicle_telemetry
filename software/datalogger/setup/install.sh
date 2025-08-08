@@ -97,4 +97,15 @@ echo "[*] Enabling datalogger systemd service..."
 sudo systemctl daemon-reexec
 sudo systemctl enable datalogger.service
 
-echo "[*] Setup complete. System rebooting, please re-connect."
+echo "[*] Setup complete."
+# Prompt for reboot
+read -p "Do you want to reboot now? (y/N): " REBOOT_ANSWER
+case "$REBOOT_ANSWER" in
+    [yY]|[yY][eE][sS])
+        echo "[*] Rebooting..."
+        sudo reboot
+        ;;
+    *)
+        echo "[*] Reboot skipped. You need to reboot via `sudo reboot` for changes to take effect."
+        ;;
+esac
