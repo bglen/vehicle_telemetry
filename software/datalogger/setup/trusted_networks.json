@@ -1,0 +1,9 @@
+{
+    "access_point": {
+        "ssid": "champcar",
+        "password": "glenracing"
+    },
+    "trusted_networks": [
+        { "ssid": "my_network", "psk": "my_password" }
+    ]
+}

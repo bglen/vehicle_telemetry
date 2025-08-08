@@ -1,0 +1,10 @@
+[Unit]
+Description=WiFi Mode Manager
+After=network.target
+
+[Service]
+ExecStart={{REPO_DIR}}/.venv/bin/python {{REPO_DIR}}/wifi_manager.py
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
