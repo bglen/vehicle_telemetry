@@ -30,15 +30,16 @@ This repo contains the hardware design for an open-source Raspberry Pi based CAN
 
 ---
 
-## Software Setup
+## Datalogger Software Setup
 
-### Clone repository
-
-### Install Dependencies
-
-## Usage
-
-### Logging Output
+1. Create a fresh install of Raspberry Pi OS on your Pi 4B
+2. Connect to your Pi via SSH or other methods. Ensure it has an internet connection.
+2. intall git and jq: `apt install git jq`
+3. Clone the repo: `git clone https://github.com/bglen/vehicle_telemetry`
+4. Go to the setup folder: `cd vehicle_telemetry/software/datalogger/setup`
+5. Make **install.sh** executable: `chmod +x install.sh`
+6. Run the installer: `./install.sh`
+7. Reboot the Pi: `sudo reboot`
 
 ## License
 MIT License

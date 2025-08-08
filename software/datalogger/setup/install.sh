@@ -3,8 +3,9 @@ set -e
 
 # Detect repo root (two levels up from setup/)
 SETUP_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_DIR="$(dirname "$(dirname "$SETUP_DIR")")"
+REPO_DIR="$(dirname "$(dirname "$(dirname "$SETUP_DIR")")")"
 echo "[*] Using repo directory: $REPO_DIR"
+echo "[*] Using setup directory: $SETUP_DIR"
 
 echo "[*] Installing required packages..."
 sudo apt update
@@ -12,6 +13,7 @@ sudo apt install -y hostapd dnsmasq iw network-manager python3-venv git jq
 
 echo "[*] Disabling services to be manually controlled..."
 sudo systemctl disable hostapd || true
+sudo systemctl unmask hostapd || true
 sudo systemctl disable dnsmasq || true
 
 # ---------- Python Environment ----------
