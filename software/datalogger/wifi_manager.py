@@ -34,29 +34,30 @@ def configure_wifi_client(ssid, psk=None):
     """
     Write wpa_supplicant.conf and reconnect.
     """
-    with open("/etc/wpa_supplicant/wpa_supplicant.conf", "w") as f:
-        f.write("ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\n")
-        f.write("update_config=1\n")
-        f.write("country=US\n\n")
-        f.write("network={\n")
-        f.write(f'    ssid="{ssid}"\n')
-        if psk:
-            f.write(f'    psk="{psk}"\n')
-        else:
-            f.write("    key_mgmt=NONE\n")
-        f.write("}\n")
-
-    subprocess.run(["nmcli", "radio", "wifi", "off"])
-    time.sleep(1)
-    subprocess.run(["nmcli", "radio", "wifi", "on"])
-    time.sleep(5)
-    subprocess.run(["wpa_cli", "-i", "wlan0", "reconfigure"])
+    # Make sure NM is running for client mode
+    subprocess.run(["systemctl", "start", "NetworkManager"])
+    # Delete any stale connection with same SSID (idempotent)
+    subprocess.run(["nmcli", "connection", "delete", ssid], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Connect (no password if open)
+    if psk:
+        subprocess.run(["nmcli", "device", "wifi", "connect", ssid, "password", psk, "ifname", "wlan0"], check=False)
+    else:
+        subprocess.run(["nmcli", "device", "wifi", "connect", ssid, "ifname", "wlan0"], check=False)
 
 def start_access_point():
     """
     Start hostapd + dnsmasq in AP mode.
     """
+    # Stop NM & kill any supplicant on wlan0
     subprocess.run(["systemctl", "stop", "NetworkManager"])
+    subprocess.run(["pkill", "-f", "wpa_supplicant"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # Bring wlan0 up with static IP for AP
+    subprocess.run(["ip", "link", "set", "wlan0", "up"])
+    subprocess.run(["ip", "addr", "flush", "dev", "wlan0"])
+    subprocess.run(["ip", "addr", "add", "192.168.4.1/24", "dev", "wlan0"])
+
+    # Start services
     subprocess.run(["systemctl", "start", "hostapd"])
     subprocess.run(["systemctl", "start", "dnsmasq"])
 
