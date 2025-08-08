@@ -37,9 +37,21 @@ This repo contains the hardware design for an open-source Raspberry Pi based CAN
 2. intall git and jq: `apt install git jq`
 3. Clone the repo: `git clone https://github.com/bglen/vehicle_telemetry`
 4. Go to the setup folder: `cd vehicle_telemetry/software/datalogger/setup`
-5. Make **install.sh** executable: `chmod +x install.sh`
-6. Run the installer: `./install.sh`
-7. Reboot the Pi: `sudo reboot`
+5. Lets edit the **network_setup.json** file: `nano network_setup.json`
+   1. In here, you can set the Wifi name and password when the datalogger is broadcasting an access point, and add any trusted Wifi networks to connect to first:
+   ```
+   {
+        "access_point": {
+            "ssid": "racecar",
+            "password": "my_datalogger_password"
+        },
+        "trusted_networks": [
+            { "ssid": "my_network", "psk": "my_password" }
+        ]
+    }
+6. Make **install.sh** executable: `chmod +x install.sh`
+7. Run the installer: `./install.sh`
+8. Reboot the Pi: `sudo reboot`
 
 ## License
 MIT License

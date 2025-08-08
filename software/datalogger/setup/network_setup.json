@@ -1,7 +1,7 @@
 {
     "access_point": {
-        "ssid": "champcar",
-        "password": "glenracing"
+        "ssid": "racecar",
+        "password": "my_datalogger_password"
     },
     "trusted_networks": [
         { "ssid": "my_network", "psk": "my_password" }

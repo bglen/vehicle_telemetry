@@ -7,7 +7,7 @@ from pathlib import Path
 
 # Auto-detect repo dir (wifi_manager.py is in software/datalogger)
 REPO_DIR = Path(__file__).resolve().parent
-TRUSTED_NETWORKS_FILE = REPO_DIR / "setup" / "trusted_networks.json"
+NETWORK_SETUP_FILE = REPO_DIR / "setup" / "network_setup.json"
 
 def scan_ssids():
     """
@@ -27,7 +27,7 @@ def load_config():
     """
     Load full JSON config (AP + trusted networks).
     """
-    with open(TRUSTED_NETWORKS_FILE) as f:
+    with open(NETWORK_SETUP_FILE) as f:
         return json.load(f)
 
 def configure_wifi_client(ssid, psk=None):

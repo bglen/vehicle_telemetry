@@ -23,8 +23,20 @@ if [ ! -d ".venv" ]; then
     python3 -m venv .venv
 fi
 source .venv/bin/activate
+
+# Sanity check: confirm we're in the venv
+if [ -z "$VIRTUAL_ENV" ]; then
+    echo "[ERROR] Virtual environment is not active. Aborting." >&2
+    deactivate || true
+    exit 1
+fi
+
+echo "[*] Virtual environment active: $VIRTUAL_ENV"
+echo "[*] Using Python: $(which python3)"
+echo "[*] Pip version: $(pip --version)"
+
+# Upgrade pip and install any requirements
 pip install --upgrade pip
-# If you have a requirements.txt in repo
 if [ -f requirements.txt ]; then
     pip install -r requirements.txt
 fi
@@ -33,9 +45,9 @@ deactivate
 # ---------- WiFi Manager Setup ----------
 echo "[*] Setting up WiFi manager..."
 
-# Grab the AP settings from trusted_networks.json
-AP_SSID=$(jq -r '.access_point.ssid' "$SETUP_DIR/trusted_networks.json")
-AP_PASSWORD=$(jq -r '.access_point.password' "$SETUP_DIR/trusted_networks.json")
+# Grab the AP settings from network_setup.json
+AP_SSID=$(jq -r '.access_point.ssid' "$SETUP_DIR/network_setup.json")
+AP_PASSWORD=$(jq -r '.access_point.password' "$SETUP_DIR/network_setup.json")
 
 # Replace placeholders in hostapd.conf
 TMP_HOSTAPD=$(mktemp)
@@ -85,4 +97,4 @@ echo "[*] Enabling datalogger systemd service..."
 sudo systemctl daemon-reexec
 sudo systemctl enable datalogger.service
 
-echo "[*] Setup complete. Reboot to take effect."
+echo "[*] Setup complete. run `sudo reboot` for changes to take effect."
