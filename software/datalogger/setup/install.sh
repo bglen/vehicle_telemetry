@@ -4,19 +4,64 @@ set -e
 # Detect repo root (two levels up from setup/)
 SETUP_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(dirname "$(dirname "$(dirname "$SETUP_DIR")")")"
+SETUP_JSON="$SETUP_DIR/network_setup.json"
+
 echo "[*] Using repo directory: $REPO_DIR"
 echo "[*] Using setup directory: $SETUP_DIR"
 
+# ---------- Prompt for WiFi configuration ----------
+echo ""
+echo "=== Wi-Fi configuration ==="
+read -p "Access Point SSID (default vehicle-datalogger if blank): " AP_SSID
+AP_SSID=${AP_SSID:-vehicle-datalogger}
+
+read -p "Access Point password (no password if left blank): " AP_PASSWORD
+AP_PASSWORD=${AP_PASSWORD:-}
+
+echo ""
+echo "Add trusted networks (client mode). Leave password blank for open networks."
+TRUSTED_SSIDS=()
+TRUSTED_PSKS=()
+while true; do
+  read -p "Add a trusted network? (y/N): " yn
+  case "$yn" in
+    [yY]*)
+      read -p "  SSID: " SSID
+      [ -z "$SSID" ] && { echo "  (empty SSID skipped)"; continue; }
+      read -p "  Password (blank if open): " PSK
+      TRUSTED_SSIDS+=("$SSID")
+      TRUSTED_PSKS+=("$PSK")
+      ;;
+    *) break ;;
+  esac
+done
+
+SETUP_JSON="$SETUP_DIR/network_setup.json"
+echo "[*] Writing Wi-Fi config to $SETUP_JSON"
+
+# Build trusted_networks array in JSON file
+TRUSTED_JSON='[]'
+for i in "${!TRUSTED_SSIDS[@]}"; do
+  ssid="${TRUSTED_SSIDS[$i]}"
+  psk="${TRUSTED_PSKS[$i]}"
+  if [ -n "$psk" ]; then
+    TRUSTED_JSON=$(echo "$TRUSTED_JSON" | jq --arg ssid "$ssid" --arg psk "$psk" '. + [{"ssid":$ssid,"psk":$psk}]')
+  else
+    TRUSTED_JSON=$(echo "$TRUSTED_JSON" | jq --arg ssid "$ssid" '. + [{"ssid":$ssid}]')
+  fi
+done
+
+jq -n --arg ap_ssid "$AP_SSID" --arg ap_pass "$AP_PASSWORD" --argjson trusted "$TRUSTED_JSON" \
+  '{access_point:{ssid:$ap_ssid, password:$ap_pass}, trusted_networks:$trusted}' > "$SETUP_JSON"
+
+echo "[*] Saved."
+
+# ---------- Install Packages ----------
 echo "[*] Installing required packages..."
 sudo apt update
-sudo apt install -y hostapd dnsmasq iw network-manager python3-venv git jq
+sudo apt install -y iw network-manager python3-venv git jq
 
-echo "[*] Disabling services to be manually controlled..."
-sudo systemctl disable hostapd || true
-sudo systemctl unmask hostapd || true
-sudo systemctl disable dnsmasq || true
-
-# ---------- Python Environment ----------
+# ---------- Python Environment Setup ----------
 echo "[*] Creating Python virtual environment..."
 cd "$REPO_DIR/software/datalogger"
 if [ ! -d ".venv" ]; then
@@ -43,21 +88,12 @@ fi
 deactivate
 
 # ---------- WiFi Manager Setup ----------
+
 echo "[*] Setting up WiFi manager..."
 
 # Grab the AP settings from network_setup.json
 AP_SSID=$(jq -r '.access_point.ssid' "$SETUP_DIR/network_setup.json")
 AP_PASSWORD=$(jq -r '.access_point.password' "$SETUP_DIR/network_setup.json")
-
-# Replace placeholders in hostapd.conf
-TMP_HOSTAPD=$(mktemp)
-sed "s|{{AP_SSID}}|$AP_SSID|g; s|{{AP_PASSWORD}}|$AP_PASSWORD|g" \
-    "$SETUP_DIR/hostapd.conf" > "$TMP_HOSTAPD"
-sudo cp "$TMP_HOSTAPD" /etc/hostapd/hostapd.conf
-rm "$TMP_HOSTAPD"
-
-# Copy dnsmasq.conf over
-sudo cp "$SETUP_DIR/dnsmasq.conf" /etc/dnsmasq.conf
 
 # Replace placeholder in wifi_manager.service with repo path
 TMP_WIFI_SERVICE=$(mktemp)
@@ -65,16 +101,6 @@ sed "s|{{REPO_DIR}}|$REPO_DIR/software/datalogger|g" \
     "$SETUP_DIR/wifi_manager.service" > "$TMP_WIFI_SERVICE"
 sudo cp "$TMP_WIFI_SERVICE" /etc/systemd/system/wifi-manager.service
 rm "$TMP_WIFI_SERVICE"
-
-# Static IP for AP mode
-echo "[*] Setting static IP for AP mode..."
-if ! grep -q "interface wlan0" /etc/dhcpcd.conf; then
-cat <<EOF | sudo tee -a /etc/dhcpcd.conf
-
-interface wlan0
-    static ip_address=192.168.4.1/24
-EOF
-fi
 
 echo "[*] Enabling wifi-manager systemd service..."
 sudo systemctl daemon-reexec
@@ -97,8 +123,8 @@ echo "[*] Enabling datalogger systemd service..."
 sudo systemctl daemon-reexec
 sudo systemctl enable datalogger.service
 
+# ---------- Prompt for reboot ----------
 echo "[*] Setup complete."
-# Prompt for reboot
 read -p "Do you want to reboot now? (y/N): " REBOOT_ANSWER
 case "$REBOOT_ANSWER" in
     [yY]|[yY][eE][sS])
@@ -106,6 +132,6 @@ case "$REBOOT_ANSWER" in
         sudo reboot
         ;;
     *)
-        echo "[*] Reboot skipped. You need to reboot via `sudo reboot` for changes to take effect."
+        echo "[*] Reboot skipped. You need to reboot for changes to take effect."
         ;;
 esac

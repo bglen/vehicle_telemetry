@@ -2,12 +2,12 @@
 
 import json
 import subprocess
-import time
 from pathlib import Path
 
 # Auto-detect repo dir (wifi_manager.py is in software/datalogger)
 REPO_DIR = Path(__file__).resolve().parent
 NETWORK_SETUP_FILE = REPO_DIR / "setup" / "network_setup.json"
+AP_CONN_NAME = "vehicle-telemetry-ap"  # connection profile name for NM hotspot
 
 def scan_ssids():
     """
@@ -32,7 +32,7 @@ def load_config():
 
 def configure_wifi_client(ssid, psk=None):
     """
-    Write wpa_supplicant.conf and reconnect.
+    Configure for client-mode wifi connection.
     """
     # Make sure NM is running for client mode
     subprocess.run(["systemctl", "start", "NetworkManager"])
@@ -46,27 +46,63 @@ def configure_wifi_client(ssid, psk=None):
 
 def start_access_point():
     """
-    Start hostapd + dnsmasq in AP mode.
+    Start AP mode using NetworkManager
     """
-    # Stop NM & kill any supplicant on wlan0
-    subprocess.run(["systemctl", "stop", "NetworkManager"])
-    subprocess.run(["pkill", "-f", "wpa_supplicant"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Read AP settings from config
+    cfg = load_config()
+    ap_cfg = cfg.get("access_point", {}) or {}
+    ap_ssid = ap_cfg.get("ssid", "vehicle-datalogger") # Default SSID: vehicle-datalogger
+    ap_pass = ap_cfg.get("password", "") # Default password: none
 
-    # Bring wlan0 up with static IP for AP
-    subprocess.run(["ip", "link", "set", "wlan0", "up"])
-    subprocess.run(["ip", "addr", "flush", "dev", "wlan0"])
-    subprocess.run(["ip", "addr", "add", "192.168.4.1/24", "dev", "wlan0"])
+    # Ensure NM is running and interface is free
+    subprocess.run(["systemctl", "start", "NetworkManager"])
+    subprocess.run(["nmcli", "device", "disconnect", "wlan0"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    # Start services
-    subprocess.run(["systemctl", "start", "hostapd"])
-    subprocess.run(["systemctl", "start", "dnsmasq"])
+    # Clean up any previous hotspot profile
+    subprocess.run(["nmcli", "connection", "down", AP_CONN_NAME], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["nmcli", "connection", "delete", AP_CONN_NAME], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # Create the hotspot profile
+    subprocess.run([
+        "nmcli", "connection", "add",
+        "type", "wifi",
+        "ifname", "wlan0",
+        "con-name", AP_CONN_NAME,
+        "autoconnect", "no",
+        "ssid", ap_ssid
+    ], check=False)
+
+    # Configure AP mode + shared IPv4 (does DHCP/NAT automatically)
+    subprocess.run([
+        "nmcli", "connection", "modify", AP_CONN_NAME,
+        "802-11-wireless.mode", "ap",
+        "802-11-wireless.band", "bg",
+        "ipv4.method", "shared",
+        "ipv6.method", "ignore"
+    ], check=False)
+
+    # Security: WPA2-PSK if password present and >= 8 chars; otherwise open
+    if ap_pass and len(ap_pass) >= 8:
+        subprocess.run([
+            "nmcli", "connection", "modify", AP_CONN_NAME,
+            "wifi-sec.key-mgmt", "wpa-psk",
+            "wifi-sec.psk", ap_pass
+        ], check=False)
+    else:
+        subprocess.run([
+            "nmcli", "connection", "modify", AP_CONN_NAME,
+            "wifi-sec.key-mgmt", "none"
+        ], check=False)
+
+    # Bring the hotspot up
+    subprocess.run(["nmcli", "connection", "up", AP_CONN_NAME], check=False)
 
 def stop_access_point():
     """
-    Stop AP services and restart NetworkManager.
+    Stop AP and ensure NetworkManager is restarted.
     """
-    subprocess.run(["systemctl", "stop", "hostapd"])
-    subprocess.run(["systemctl", "stop", "dnsmasq"])
+    subprocess.run(["nmcli", "connection", "down", AP_CONN_NAME], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["nmcli", "connection", "delete", AP_CONN_NAME], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     subprocess.run(["systemctl", "start", "NetworkManager"])
 
 def main():
@@ -84,7 +120,7 @@ def main():
             configure_wifi_client(entry["ssid"], entry.get("psk"))
             return
 
-    # If no trusted networks found → AP mode
+    # If no trusted networks found -> AP mode
     print("No trusted networks found, starting access point")
     start_access_point()
 

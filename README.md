@@ -34,7 +34,7 @@ This repo contains the hardware design for an open-source Raspberry Pi based CAN
 
 1. Create a fresh install of Raspberry Pi OS on your Pi 4B
 2. Connect to your Pi via SSH or other methods. Ensure it has an internet connection.
-3. Update apt and intall git and jq: `sudo apt update && sudo apt upgrade -y && sudo apt install -y git jq`
+3. Update apt and install git and jq: `sudo apt update && sudo apt upgrade -y && sudo apt install -y git jq`
 4. Clone the repo: `git clone https://github.com/bglen/vehicle_telemetry`
 5. Go to the setup folder: `cd vehicle_telemetry/software/datalogger/setup`
 6. Lets edit the **network_setup.json** file: `nano network_setup.json`
