@@ -1,0 +1,14 @@
+[Unit]
+Description=Minimal Python File Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=datalogger
+WorkingDirectory={{REPO_DIR}}
+ExecStart={{REPO_DIR}}/.venv/bin/python {{REPO_DIR}}/fileserver.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

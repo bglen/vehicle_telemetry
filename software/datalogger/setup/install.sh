@@ -61,6 +61,9 @@ echo "[*] Installing required packages..."
 sudo apt update
 sudo apt install -y iw network-manager python3-venv git jq
 
+# Install fileserver mDNS so we can reach the Pi at datalogger.local
+sudo apt install -y avahi-daemon libnss-mdns
+
 # ---------- Python Environment Setup ----------
 echo "[*] Creating Python virtual environment..."
 cd "$REPO_DIR/software/datalogger"
@@ -95,7 +98,7 @@ echo "[*] Setting up WiFi manager..."
 AP_SSID=$(jq -r '.access_point.ssid' "$SETUP_DIR/network_setup.json")
 AP_PASSWORD=$(jq -r '.access_point.password' "$SETUP_DIR/network_setup.json")
 
-# Replace placeholder in wifi_manager.service with repo path
+# Replaces the placeholder in wifi_manager.service with repo path
 TMP_WIFI_SERVICE=$(mktemp)
 sed "s|{{REPO_DIR}}|$REPO_DIR/software/datalogger|g" \
     "$SETUP_DIR/wifi_manager.service" > "$TMP_WIFI_SERVICE"
@@ -113,7 +116,7 @@ if ! id -u datalogger >/dev/null 2>&1; then
     sudo useradd -m -s /bin/bash datalogger
 fi
 
-# Copy service file
+# Replate path placeholders and copy service file
 TMP_DATALOGGER_SERVICE=$(mktemp)
 sed "s|{{REPO_DIR}}|$REPO_DIR/software/datalogger|g" "$SETUP_DIR/datalogger.service" > "$TMP_DATALOGGER_SERVICE"
 sudo cp "$TMP_DATALOGGER_SERVICE" /etc/systemd/system/datalogger.service
@@ -122,6 +125,40 @@ rm "$TMP_DATALOGGER_SERVICE"
 echo "[*] Enabling datalogger systemd service..."
 sudo systemctl daemon-reexec
 sudo systemctl enable datalogger.service
+
+
+# ---------- File Server Setup ----------
+echo "[*] Setting up file server..."
+sudo chown -R datalogger:datalogger "$REPO_DIR/software/datalogger/logs"
+
+# Path to the fileserver.py (one directory above SETUP_DIR)
+FILES_PY="$(dirname "$SETUP_DIR")/fileserver.py"
+if [ ! -f "$FILES_PY" ]; then
+  echo "[ERROR] Expected fileserver.py at: $FILES_PY" >&2
+  exit 1
+fi
+
+# Install/enable Avahi (mDNS) already done above; set hostname to 'datalogger'
+HOSTNAME_CHANGED=0
+if [ "$(hostname)" != "datalogger" ]; then
+  echo "[*] Setting hostname to 'datalogger' for mDNS (datalogger.local)..."
+  echo datalogger | sudo tee /etc/hostname >/dev/null
+  sudo sed -i 's/^\(127\.0\.1\.1\s*\).*/\1datalogger/' /etc/hosts
+  sudo hostnamectl set-hostname datalogger
+  HOSTNAME_CHANGED=1
+fi
+
+# Replate path placeholders and copy service file
+TMP_FILESERVER_SERVICE=$(mktemp)
+sed "s|{{REPO_DIR}}|$REPO_DIR/software/datalogger|g" "$SETUP_DIR/fileserver.service" > "$TMP_FILESERVER_SERVICE"
+sudo cp "$TMP_FILESERVER_SERVICE" /etc/systemd/system/fileserver.service
+rm "$TMP_FILESERVER_SERVICE"
+
+echo "[*] Enabling fileserver systemd service..."
+sudo systemctl daemon-reexec
+sudo systemctl enable fileserver.service
+sudo systemctl restart avahi-daemon || true
+sudo systemctl start fileserver.service
 
 # ---------- Prompt for reboot ----------
 echo "[*] Setup complete."
