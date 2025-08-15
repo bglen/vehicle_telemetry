@@ -12,7 +12,7 @@ echo "[*] Using setup directory: $SETUP_DIR"
 # ---------- Prompt for WiFi configuration ----------
 echo ""
 echo "=== Wi-Fi configuration ==="
-read -p "Access Point SSID (default vehicle-datalogger if blank): " AP_SSID
+read -p "Enter Access Point SSID (defaults to vehicle-datalogger if left blank). This is the network the datalogger will create if no trusted networks are found: " AP_SSID
 AP_SSID=${AP_SSID:-vehicle-datalogger}
 
 read -p "Access Point password (no password if left blank): " AP_PASSWORD
