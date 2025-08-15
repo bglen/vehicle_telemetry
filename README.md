@@ -7,18 +7,23 @@ The Vehicle Telemetry System is an offline-first, containerized CAN data logging
 # Architecture Overview
 ![Telemetry Architecture](/docs/Telemetry%20Architecture%20Diagram/Telemetry%20Architecture.png)
 
-### Features
-- Logs CAN messages and actively decodes with a provided DBC file
-- Logging capability with and without internet access
-- Stores data to local influxDB database when logging offline. Syncs data to cloud database when internet access is detected.
-- Bluetooth control of action cameras (GoPro, DJI Action)
+### Current Features
+- Logs CAN and decodes to CSV file
+- Ability to decode using multiple DBC files
 - Access and download decoded log files on the logger's local WiFi hotspot
 - Handles sudden power loss gracefully
 - Supports two CAN 2.0B networks up to 1 Mbps
+- Logs data from NMEA format USB GPS devices
+
+### Future Functionality
+- Stores data to local influxDB database when logging offline. Syncs data to cloud database when internet access is detected.
+- Bluetooth control of action cameras (GoPro, DJI Action)
+
+# Data Logger
 
 ## Hardware Overview
 
-This repo contains the hardware design for an open-source Raspberry Pi based CAN data logger.
+This repo contains the hardware design for an open-source Raspberry Pi-based CAN data logger.
 
 - Raspberry Pi 4 Model B
 - 12V nominal power
@@ -28,8 +33,6 @@ This repo contains the hardware design for an open-source Raspberry Pi based CAN
 - Temperature, pressure, and humidity SPI sensor
 - Bus voltage logging
 
----
-
 ## Datalogger Software Setup
 
 1. Create a fresh install of Raspberry Pi OS on your Pi 4B
@@ -37,24 +40,14 @@ This repo contains the hardware design for an open-source Raspberry Pi based CAN
 3. Update apt and install git and jq: `sudo apt upgrade -y && sudo apt install -y git jq`
 4. Clone the repo: `git clone https://github.com/bglen/vehicle_telemetry`
 5. Go to the setup folder: `cd vehicle_telemetry/software/datalogger/setup`
-6. Lets edit the **network_setup.json** file: `nano network_setup.json`
-   1. In here, you can set the Wifi name and password when the datalogger is broadcasting an access point, and add any trusted Wifi networks to connect to first:
-   
-    > *Note: if you forget to edit this and reboot the Pi, you will not be able to SSH into it!*
-
-   ```
-   {
-        "access_point": {
-            "ssid": "racecar",
-            "password": "my_datalogger_password"
-        },
-        "trusted_networks": [
-            { "ssid": "my_network", "psk": "my_password" }
-        ]
-    }
-7. Make **install.sh** executable: `chmod +x install.sh`
-8. Run the installer: `./install.sh`
+6. Make **install.sh** executable: `chmod +x install.sh`
+7. Run the installer: `./install.sh`
+8. During the install, enter in your preferred access point network name and trusted network details.
 9. Reboot the Pi: `sudo reboot`
+
+# Data Visualiation Tool
+
+A python data visualization tool is provided and uses **rerun.io** to visualize .CSV log files.
 
 ## License
 MIT License

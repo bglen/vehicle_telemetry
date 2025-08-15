@@ -22,10 +22,7 @@ led = LED(5, initial_value=False)
 led.off()
 
 # === Logging === 
-OUTPUT_DIR = os.path.expanduser('~/can_logs')
-header = ['Time (s)', 'Arbitration ID'] + canbus.signal_columns
-if USE_GPS:
-    header += gps.GPS_COLUMNS
+OUTPUT_DIR = os.path.expanduser('~/logs')
 
 # === Global Variables ===
 logging_active = False
@@ -44,7 +41,13 @@ def new_log_file():
     filename = os.path.join(OUTPUT_DIR, f'can_log_{timestamp_str}.csv')
     csvfile = open(filename, mode='w', newline='')
     csv_writer = csv.writer(csvfile)
-    csv_writer.writerow(header) # Write the column names in the header
+
+    # With the DBC loaded we can build our header from all the message declarations
+    header = ['Time (s)', 'Message ID'] + canbus.signal_columns
+    if USE_GPS:
+        header += gps.GPS_COLUMNS
+
+    csv_writer.writerow(header)
     start_time = time.time()
 
 def toggle_logging():
@@ -99,7 +102,7 @@ def log_loop():
                 # Update the logging timestamp
                 rel_time = time.time() - start_time
 
-                # Try to decode message with DBC
+                # Try to decode the message with DBC
                 vals = {col: '' for col in canbus.signal_columns}
                 try:
                     decoded = canbus.db.decode_message(msg.arbitration_id, msg.data)
