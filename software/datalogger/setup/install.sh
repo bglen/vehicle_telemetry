@@ -59,7 +59,7 @@ echo "[*] Saved."
 # ---------- Install Packages ----------
 echo "[*] Installing required packages..."
 sudo apt update
-sudo apt install -y iw network-manager python3-venv git jq
+sudo apt install -y iw network-manager python3-venv git jq build-essential python3-dev libffi-dev libssl-dev
 
 # Install fileserver mDNS so we can reach the Pi at datalogger.local
 sudo apt install -y avahi-daemon libnss-mdns
@@ -84,7 +84,7 @@ echo "[*] Using Python: $(which python3)"
 echo "[*] Pip version: $(pip --version)"
 
 # Upgrade pip and install any requirements
-pip install --upgrade pip
+pip install --upgrade pip setuptools wheel
 if [ -f requirements.txt ]; then
     pip install -r requirements.txt
 fi
