@@ -59,7 +59,7 @@ echo "[*] Saved."
 # ---------- Install Packages ----------
 echo "[*] Installing required packages..."
 sudo apt update
-sudo apt install -y iw network-manager python3-venv git jq build-essential python3-dev libffi-dev libssl-dev
+sudo apt install -y iw network-manager python3-venv git jq python-gpiozero
 
 # Install fileserver mDNS so we can reach the Pi at datalogger.local
 sudo apt install -y avahi-daemon libnss-mdns
