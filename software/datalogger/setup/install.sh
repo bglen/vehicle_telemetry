@@ -59,7 +59,7 @@ echo "[*] Saved."
 # ---------- Install Packages ----------
 echo "[*] Installing required packages..."
 sudo apt update
-sudo apt install -y iw network-manager python3-venv git jq python-gpiozero
+sudo apt install -y iw network-manager python3-venv git jq python3-lgpio
 
 # Install fileserver mDNS so we can reach the Pi at datalogger.local
 sudo apt install -y avahi-daemon libnss-mdns
@@ -68,7 +68,7 @@ sudo apt install -y avahi-daemon libnss-mdns
 echo "[*] Creating Python virtual environment..."
 cd "$REPO_DIR/software/datalogger"
 if [ ! -d ".venv" ]; then
-    python3 -m venv .venv
+    python3 -m venv --system-site-packages .venv
 fi
 source .venv/bin/activate
 

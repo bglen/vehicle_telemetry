@@ -1,11 +1,13 @@
 [Unit]
 Description=WiFi Mode Manager
-After=network-online.target
-Wants=network-online.target
+After=NetworkManager.service network-online.target
+Wants=NetworkManager.service
 
 [Service]
+Type=oneshot
 ExecStart={{REPO_DIR}}/.venv/bin/python {{REPO_DIR}}/wifi_manager.py
-Restart=always
+RemainAfterExit=yes
+Restart=no
 
 [Install]
 WantedBy=multi-user.target

@@ -12,7 +12,7 @@ import sys
 #   then access can.db, can.can_interface, can.signal_columns
 
 # Configuration for CAN logging
-DBC_DIR = os.path.expanduser('~/dbc') # Directory for all DBC files
+DBC_DIR = os.path.expanduser('./dbc') # Directory for all DBC files
 CHANNEL = 'can0'
 BITRATE = 1000000
 
